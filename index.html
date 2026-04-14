@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="sr-Latn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Praćenje studentskih navika</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f12;
+    --bg-elev: #151920;
+    --bg-elev-2: #1c2029;
+    --border: #262b36;
+    --border-strong: #363c49;
+    --text: #e6e8ec;
+    --text-dim: #8a92a3;
+    --accent: #7dd3fc;
+    --accent-2: #a78bfa;
+    --ok: #86efac;
+    --err: #fca5a5;
+    --warn: #fde68a;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: var(--font-sans); }
+  body { min-height: 100vh; padding: 24px 32px 64px; }
+  h1, h2, h3 { font-family: var(--font-sans); letter-spacing: -0.02em; margin: 0; }
+  h1 { font-size: 28px; font-weight: 700; }
+  h2 { font-size: 18px; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
+  header .tag { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
+  main { display: grid; grid-template-columns: 380px 1fr; gap: 24px; max-width: 1600px; margin: 0 auto; }
+  @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+
+  .card { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+
+  form .row { display: flex; flex-direction: column; margin-bottom: 14px; }
+  form label { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  form input, form select {
+    background: var(--bg-elev-2); color: var(--text); border: 1px solid var(--border-strong);
+    border-radius: 6px; padding: 10px 12px; font-family: var(--font-mono); font-size: 13px;
+    outline: none; transition: border-color 0.15s;
+  }
+  form input:focus, form select:focus { border-color: var(--accent); }
+  form .err { color: var(--err); font-family: var(--font-mono); font-size: 11px; min-height: 14px; margin-top: 4px; }
+  form .err:empty { min-height: 0; }
+
+  button {
+    background: var(--accent); color: #0a0c10; border: none; border-radius: 6px;
+    padding: 10px 16px; font-family: var(--font-sans); font-weight: 500; font-size: 14px;
+    cursor: pointer; transition: filter 0.15s;
+  }
+  button:hover { filter: brightness(1.1); }
+  button.secondary { background: var(--bg-elev-2); color: var(--text); border: 1px solid var(--border-strong); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .stat .k { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+  .stat .v { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--text); margin-top: 4px; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 16px; }
+  .toolbar .row { display: flex; flex-direction: column; }
+  .toolbar label { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .toolbar input, .toolbar select {
+    background: var(--bg-elev-2); color: var(--text); border: 1px solid var(--border-strong);
+    border-radius: 6px; padding: 8px 10px; font-family: var(--font-mono); font-size: 12px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 12px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-dim); font-weight: 500; text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; background: var(--bg-elev-2); position: sticky; top: 0; }
+  tbody tr:hover { background: var(--bg-elev-2); }
+  .table-wrap { max-height: 500px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .empty { padding: 40px; text-align: center; color: var(--text-dim); font-family: var(--font-mono); }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--bg-elev-2); color: var(--text);
+    border: 1px solid var(--accent); border-left: 4px solid var(--accent);
+    padding: 12px 18px; border-radius: 6px; font-family: var(--font-mono); font-size: 13px;
+    transform: translateX(420px); transition: transform 0.25s ease-out; z-index: 1000;
+  }
+  .toast.show { transform: translateX(0); }
+
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .count { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Studentske navike</h1>
+    <div class="tag">// funkcionalno programiranje · projekat</div>
+  </div>
+  <div class="tag" id="clock"></div>
+</header>
+
+<main>
+
+  <section class="card" aria-label="Unos podataka">
+    <h2>Unos</h2>
+    <form id="form" novalidate>
+      <div class="row">
+        <label for="sifra">Šifra studenta</label>
+        <input id="sifra" name="sifra" type="text" placeholder="npr. ST-2024-001" />
+        <div class="err" data-err="sifra"></div>
+      </div>
+      <div class="row">
+        <label for="pol">Pol</label>
+        <select id="pol" name="pol">
+          <option value="">— izaberi —</option>
+          <option value="M">M</option>
+          <option value="Ž">Ž</option>
+          <option value="Ostalo">Ostalo</option>
+        </select>
+        <div class="err" data-err="pol"></div>
+      </div>
+      <div class="row">
+        <label for="godine">Godine (17–40)</label>
+        <input id="godine" name="godine" type="number" min="17" max="40" />
+        <div class="err" data-err="godine"></div>
+      </div>
+      <div class="row">
+        <label for="smer">Smer</label>
+        <select id="smer" name="smer">
+          <option value="">— izaberi —</option>
+          <option value="IT">IT</option>
+          <option value="EL">EL</option>
+          <option value="ME">ME</option>
+          <option value="AR">AR</option>
+          <option value="EC">EC</option>
+          <option value="OS">OS</option>
+        </select>
+        <div class="err" data-err="smer"></div>
+      </div>
+      <div class="row">
+        <label for="sati_ucenja">Sati učenja dnevno (0–16)</label>
+        <input id="sati_ucenja" name="sati_ucenja" type="number" step="0.5" min="0" max="16" />
+        <div class="err" data-err="sati_ucenja"></div>
+      </div>
+      <div class="row">
+        <label for="sati_sna">Sati sna (0–12)</label>
+        <input id="sati_sna" name="sati_sna" type="number" step="0.5" min="0" max="12" />
+        <div class="err" data-err="sati_sna"></div>
+      </div>
+      <div class="row">
+        <label for="sati_mreze">Sati na društvenim mrežama (0–12)</label>
+        <input id="sati_mreze" name="sati_mreze" type="number" step="0.5" min="0" max="12" />
+        <div class="err" data-err="sati_mreze"></div>
+      </div>
+      <div class="row">
+        <label for="sati_fizicke">Sati fizičke aktivnosti (0–20)</label>
+        <input id="sati_fizicke" name="sati_fizicke" type="number" step="0.5" min="0" max="20" />
+        <div class="err" data-err="sati_fizicke"></div>
+      </div>
+      <div class="row">
+        <label for="prosecna_ocena">Prosečna ocena (6.00–10.00)</label>
+        <input id="prosecna_ocena" name="prosecna_ocena" type="number" step="0.01" min="6" max="10" />
+        <div class="err" data-err="prosecna_ocena"></div>
+      </div>
+      <div class="row">
+        <label for="nivo_stresa">Nivo stresa (1–5)</label>
+        <input id="nivo_stresa" name="nivo_stresa" type="number" min="1" max="5" />
+        <div class="err" data-err="nivo_stresa"></div>
+      </div>
+
+      <button type="submit">Dodaj studenta</button>
+    </form>
+  </section>
+
+  <section>
+
+    <h2>Agregati</h2>
+    <div class="stats" id="stats"></div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2 style="margin: 0;">Evidencija</h2>
+        <span class="count" id="count">0 zapisa</span>
+      </div>
+
+      <div class="toolbar">
+        <div class="row">
+          <label for="f-min-ocena">Min ocena</label>
+          <input id="f-min-ocena" type="number" step="0.01" min="6" max="10" placeholder="6.00" />
+        </div>
+        <div class="row">
+          <label for="f-pol">Pol</label>
+          <select id="f-pol">
+            <option value="">svi</option>
+            <option value="M">M</option>
+            <option value="Ž">Ž</option>
+            <option value="Ostalo">Ostalo</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="f-smer">Smer</label>
+          <select id="f-smer">
+            <option value="">svi</option>
+            <option value="IT">IT</option>
+            <option value="EL">EL</option>
+            <option value="ME">ME</option>
+            <option value="AR">AR</option>
+            <option value="EC">EC</option>
+            <option value="OS">OS</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="f-sort">Sortiranje</label>
+          <select id="f-sort">
+            <option value="ocena_desc">Ocena ↓</option>
+            <option value="ocena_asc">Ocena ↑</option>
+            <option value="ucenje_desc">Učenje ↓</option>
+            <option value="stres_asc">Stres ↑</option>
+          </select>
+        </div>
+        <button class="secondary" id="btn-reset">Resetuj filtere</button>
+        <button id="btn-export">Izvezi CSV</button>
+      </div>
+
+      <div class="table-wrap">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>Šifra</th><th>Pol</th><th>God.</th><th>Smer</th>
+              <th>Učenje</th><th>San</th><th>Mreže</th><th>Fizička</th>
+              <th>Ocena</th><th>Stres</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function App() {
+  'use strict';
+
+  const stanje = {
+    studenti: [],
+    filter: { minOcena: null, pol: '', smer: '', sort: 'ocena_desc' }
+  };
+
+  const toNum = (v) => (v === '' || v === null || v === undefined) ? NaN : Number(v);
+  const clamp2 = (n) => Math.round(n * 100) / 100;
+  const formatBroj = (n) => Number.isFinite(n) ? clamp2(n).toFixed(2) : '—';
+  const isBlank = (s) => typeof s !== 'string' || s.trim() === '';
+  const inRange = (n, lo, hi) => Number.isFinite(n) && n >= lo && n <= hi;
+
+  const pipe = (...fns) => (x) => fns.reduce((acc, f) => f(acc), x);
+
+  const aggregatorFactory = (polje, reduktor, pocetna) => (niz) =>
+    niz.reduce((acc, s) => reduktor(acc, s[polje]), pocetna);
+
+  const sumaPolja  = (polje) => aggregatorFactory(polje, (a, v) => a + (Number.isFinite(v) ? v : 0), 0);
+  const prosekPolja = (polje) => (niz) => niz.length === 0 ? NaN : sumaPolja(polje)(niz) / niz.length;
+
+  const validatori = {
+    sifra:           (v) => isBlank(v) ? 'Šifra je obavezna.' : (v.trim().length < 3 ? 'Najmanje 3 karaktera.' : ''),
+    pol:             (v) => ['M','Ž','Ostalo'].includes(v) ? '' : 'Izaberite pol.',
+    godine:          (v) => inRange(toNum(v), 17, 40) ? '' : 'Godine moraju biti 17–40.',
+    smer:            (v) => ['IT','EL','ME','AR','EC','OS'].includes(v) ? '' : 'Izaberite smer.',
+    sati_ucenja:     (v) => inRange(toNum(v), 0, 16) ? '' : 'Sati učenja: 0–16.',
+    sati_sna:        (v) => inRange(toNum(v), 0, 12) ? '' : 'Sati sna: 0–12.',
+    sati_mreze:      (v) => inRange(toNum(v), 0, 12) ? '' : 'Sati na mrežama: 0–12.',
+    sati_fizicke:    (v) => inRange(toNum(v), 0, 20) ? '' : 'Sati fizičke: 0–20.',
+    prosecna_ocena:  (v) => inRange(toNum(v), 6, 10) ? '' : 'Ocena: 6.00–10.00.',
+    nivo_stresa:     (v) => inRange(toNum(v), 1, 5) ? '' : 'Stres: 1–5.'
+  };
+
+  const normalizuj = (raw) => ({
+    sifra:          raw.sifra.trim(),
+    pol:            raw.pol,
+    godine:         toNum(raw.godine),
+    smer:           raw.smer,
+    sati_ucenja:    toNum(raw.sati_ucenja),
+    sati_sna:       toNum(raw.sati_sna),
+    sati_mreze:     toNum(raw.sati_mreze),
+    sati_fizicke:   toNum(raw.sati_fizicke),
+    prosecna_ocena: toNum(raw.prosecna_ocena),
+    nivo_stresa:    toNum(raw.nivo_stresa)
+  });
+
+  const primeniFilter = (niz, f) =>
+    niz
+      .filter((s) => f.minOcena == null || s.prosecna_ocena >= f.minOcena)
+      .filter((s) => !f.pol  || s.pol  === f.pol)
+      .filter((s) => !f.smer || s.smer === f.smer);
+
+  const strategijeSortiranja = {
+    ocena_desc:   (a, b) => b.prosecna_ocena - a.prosecna_ocena,
+    ocena_asc:    (a, b) => a.prosecna_ocena - b.prosecna_ocena,
+    ucenje_desc:  (a, b) => b.sati_ucenja - a.sati_ucenja,
+    stres_asc:    (a, b) => a.nivo_stresa - b.nivo_stresa
+  };
+  const primeniSort = (niz, kljuc) => [...niz].sort(strategijeSortiranja[kljuc]);
+
+  const pripremiPrikaz = (f) => pipe(
+    (niz) => primeniFilter(niz, f),
+    (niz) => primeniSort(niz, f.sort)
+  );
+
+  const izgradiRedove = (niz, i = 0, akc = '') => {
+    if (i >= niz.length) return akc;
+    const s = niz[i];
+    const red = `
+      <tr>
+        <td>${escapeHTML(s.sifra)}</td>
+        <td>${escapeHTML(s.pol)}</td>
+        <td>${s.godine}</td>
+        <td>${escapeHTML(s.smer)}</td>
+        <td>${formatBroj(s.sati_ucenja)}</td>
+        <td>${formatBroj(s.sati_sna)}</td>
+        <td>${formatBroj(s.sati_mreze)}</td>
+        <td>${formatBroj(s.sati_fizicke)}</td>
+        <td>${formatBroj(s.prosecna_ocena)}</td>
+        <td>${s.nivo_stresa}</td>
+      </tr>`;
+    return izgradiRedove(niz, i + 1, akc + red);
+  };
+
+  const escapeHTML = (s) => String(s).replace(/[&<>"']/g, (c) => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+
+  const CSV_POLJA = ['sifra','pol','godine','smer','sati_ucenja','sati_sna','sati_mreze','sati_fizicke','prosecna_ocena','nivo_stresa'];
+
+  const uCSVRed = (vrednosti) =>
+    vrednosti.map((v) => {
+      const s = String(v);
+      return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }).join(';');
+
+  const generisiCSV = (niz) => {
+    const zaglavlje = uCSVRed(CSV_POLJA);
+    const redovi = niz
+      .map((s) => CSV_POLJA.map((p) => s[p]))
+      .reduce((acc, r) => acc + '\n' + uCSVRed(r), '');
+    return zaglavlje + redovi;
+  };
+
+  const preuzmiCSV = (tekst, ime) => {
+    const blob = new Blob(['\uFEFF' + tekst], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = ime;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  };
+
+  const POLJA_AGR = ['sati_ucenja','sati_sna','sati_mreze','sati_fizicke','prosecna_ocena','nivo_stresa'];
+  const LABELE_AGR = {
+    sati_ucenja: 'Ø učenje',
+    sati_sna:    'Ø san',
+    sati_mreze:  'Ø mreže',
+    sati_fizicke:'Ø fizička',
+    prosecna_ocena: 'Ø ocena',
+    nivo_stresa: 'Ø stres'
+  };
+
+  const renderStatistike = (niz) => {
+    const el = document.getElementById('stats');
+    const karte = [
+      { k: 'broj', v: niz.length }
+    ];
+    POLJA_AGR.forEach((p) => {
+      karte.push({ k: LABELE_AGR[p], v: formatBroj(prosekPolja(p)(niz)) });
+    });
+    el.innerHTML = karte
+      .map((s) => `<div class="stat"><div class="k">${s.k}</div><div class="v">${s.v}</div></div>`)
+      .join('');
+  };
+
+  const renderTabela = () => {
+    const prikaz = pripremiPrikaz(stanje.filter)(stanje.studenti);
+    const tbody = document.getElementById('tbody');
+    const count = document.getElementById('count');
+
+    count.textContent = `${prikaz.length} / ${stanje.studenti.length} zapisa`;
+
+    if (prikaz.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="10" class="empty">Nema zapisa za prikaz.</td></tr>`;
+    } else {
+      tbody.innerHTML = izgradiRedove(prikaz);
+    }
+    renderStatistike(prikaz);
+  };
+
+  let toastTimer = null;
+  const toast = (poruka) => {
+    const el = document.getElementById('toast');
+    el.textContent = poruka;
+    el.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  };
+
+  const formEl = document.getElementById('form');
+
+  const prikaziGreske = (greske) => {
+    Object.keys(greske).forEach((k) => {
+      const el = formEl.querySelector(`[data-err="${k}"]`);
+      if (el) el.textContent = greske[k];
+    });
+  };
+
+  const skupiVrednosti = () => {
+    const fd = new FormData(formEl);
+    const obj = {};
+    fd.forEach((v, k) => { obj[k] = v; });
+    return obj;
+  };
+
+  const validiraj = (raw) => {
+    return Object.keys(validatori).reduce((acc, polje) => {
+      acc[polje] = validatori[polje](raw[polje]);
+      return acc;
+    }, {});
+  };
+
+  const imaGresaka = (greske) =>
+    Object.values(greske).some((v) => v !== '');
+
+  formEl.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const raw = skupiVrednosti();
+    const greske = validiraj(raw);
+    prikaziGreske(greske);
+    if (imaGresaka(greske)) {
+      toast('Ispravite greške u formi.');
+      return;
+    }
+    const student = normalizuj(raw);
+    stanje.studenti.push(student);
+    formEl.reset();
+    prikaziGreske(
+      Object.keys(validatori).reduce((a, k) => ({ ...a, [k]: '' }), {})
+    );
+    renderTabela();
+    toast(`Student ${student.sifra} dodat.`);
+  });
+
+  const fMinOcena = document.getElementById('f-min-ocena');
+  const fPol      = document.getElementById('f-pol');
+  const fSmer     = document.getElementById('f-smer');
+  const fSort     = document.getElementById('f-sort');
+
+  const povezi = (el, handler) => el.addEventListener('input', handler);
+  const osveziFilter = () => {
+    const n = toNum(fMinOcena.value);
+    stanje.filter = {
+      minOcena: Number.isFinite(n) ? n : null,
+      pol:  fPol.value,
+      smer: fSmer.value,
+      sort: fSort.value
+    };
+    renderTabela();
+  };
+  [fMinOcena, fPol, fSmer, fSort].forEach((el) => povezi(el, osveziFilter));
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    fMinOcena.value = ''; fPol.value = ''; fSmer.value = ''; fSort.value = 'ocena_desc';
+    osveziFilter();
+  });
+
+  document.getElementById('btn-export').addEventListener('click', () => {
+    if (stanje.studenti.length === 0) { toast('Nema podataka za izvoz.'); return; }
+    const prikaz = pripremiPrikaz(stanje.filter)(stanje.studenti);
+    const csv = generisiCSV(prikaz);
+    preuzmiCSV(csv, 'student_navike.csv');
+    toast(`Izvezeno ${prikaz.length} zapisa.`);
+  });
+
+  const clockEl = document.getElementById('clock');
+  const osveziSat = () => {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    clockEl.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  };
+  osveziSat();
+  setInterval(osveziSat, 1000);
+
+  const demo = [
+    { sifra: 'ST-2024-001', pol: 'M',      godine: 21, smer: 'IT', sati_ucenja: 5.5, sati_sna: 7,   sati_mreze: 2.5, sati_fizicke: 1.0, prosecna_ocena: 8.75, nivo_stresa: 3 },
+    { sifra: 'ST-2024-002', pol: 'Ž',      godine: 20, smer: 'EC', sati_ucenja: 6.0, sati_sna: 6.5, sati_mreze: 3.0, sati_fizicke: 2.5, prosecna_ocena: 9.20, nivo_stresa: 4 },
+    { sifra: 'ST-2024-003', pol: 'M',      godine: 23, smer: 'ME', sati_ucenja: 3.0, sati_sna: 8,   sati_mreze: 4.5, sati_fizicke: 3.0, prosecna_ocena: 7.40, nivo_stresa: 2 },
+    { sifra: 'ST-2024-004', pol: 'Ostalo', godine: 22, smer: 'AR', sati_ucenja: 4.5, sati_sna: 7.5, sati_mreze: 2.0, sati_fizicke: 1.5, prosecna_ocena: 8.10, nivo_stresa: 3 }
+  ];
+  demo.forEach((s) => stanje.studenti.push(s));
+
+  renderTabela();
+})();
+</script>
+
+</body>
+</html>
